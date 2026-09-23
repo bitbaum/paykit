@@ -1,0 +1,43 @@
+{
+  "name": "paykit",
+  "version": "0.1.0",
+  "description": "Let a website get paid without holding the money. Classify a pasted Bitcoin receive string, and record a shown code (Twint, another currency) the visitor pays in their own app.",
+  "license": "MIT",
+  "author": "Mao Nakamoto",
+  "homepage": "https://bitbaum.orangecat.ch/packages/paykit/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bitbaum/paykit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bitbaum/paykit/issues"
+  },
+  "keywords": ["bitcoin", "lightning", "payments", "headless"],
+  "type": "module",
+  "sideEffects": false,
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test test/*.test.js",
+    "verify": "pnpm run typecheck && pnpm run build && pnpm test",
+    "prepare": "pnpm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "typescript": "^6.0.3"
+  }
+}
