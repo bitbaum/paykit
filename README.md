@@ -3,7 +3,7 @@
 Let a website get paid. The website does not hold the money.
 
 ```bash
-pnpm add paykit
+pnpm add @bitbaum/paykit
 ```
 
 Part of [bitbaum](https://bitbaum.orangecat.ch/packages/paykit/). The same behavior ships in [OrangeCat](https://orangecat.ch) today.
@@ -15,7 +15,7 @@ A shop, a clinic, or a fundraiser should be able to take a payment without build
 ## Use
 
 ```ts
-import { classifyPaste, shownRail } from 'paykit';
+import { classifyPaste, shownRail } from '@bitbaum/paykit';
 
 classifyPaste('bitcoin:bc1q…'); // 'onchain'
 classifyPaste('you@coinos.io'); // 'lightning'

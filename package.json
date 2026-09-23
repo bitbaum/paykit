@@ -1,5 +1,5 @@
 {
-  "name": "paykit",
+  "name": "@bitbaum/paykit",
   "version": "0.1.0",
   "description": "Let a website get paid without holding the money. Classify a pasted Bitcoin receive string, and record a shown code (Twint, another currency) the visitor pays in their own app.",
   "license": "MIT",
