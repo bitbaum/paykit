@@ -30,3 +30,9 @@ test('a shown code is not a settled rail', () => {
   assert.equal(settled?.kind, 'lightning');
   assert.equal(settledRail('not a wallet'), null);
 });
+
+test('malformed URI escapes are ignored instead of throwing', () => {
+  assert.equal(normalizePastedHandle('bitcoin:?label=%E0%A4%A&lightning=lnbc123'), 'lnbc123');
+  assert.equal(normalizePastedHandle('bitcoin:?lightning=%E0%A4%A'), '');
+  assert.equal(classifyPaste('bitcoin:?lightning=%E0%A4%A'), 'unknown');
+});

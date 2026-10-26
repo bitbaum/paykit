@@ -2,8 +2,23 @@ function readQuery(query: string, key: string): string {
   for (const part of query.split('&')) {
     const eq = part.indexOf('=');
     if (eq === -1) continue;
-    if (decodeURIComponent(part.slice(0, eq)) !== key) continue;
-    return decodeURIComponent(part.slice(eq + 1)).trim();
+    // A malformed escape in an unrelated query item must not make pasting a
+    // payment URI throw. Decode individual components defensively and leave
+    // malformed text uninterpreted so the host's validator rejects it.
+    let name: string;
+    let value: string;
+    try {
+      name = decodeURIComponent(part.slice(0, eq).replace(/\+/g, ' '));
+    } catch {
+      continue;
+    }
+    if (name !== key) continue;
+    try {
+      value = decodeURIComponent(part.slice(eq + 1).replace(/\+/g, ' '));
+    } catch {
+      continue;
+    }
+    return value.trim();
   }
   return '';
 }
