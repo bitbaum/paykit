@@ -19,3 +19,5 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run verify
+      - name: Committed dist matches the source
+        run: git diff --exit-code --stat -- dist
