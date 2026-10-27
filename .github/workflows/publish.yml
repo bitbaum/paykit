@@ -21,6 +21,10 @@ on:
         description: 'Publish the exact verified release tag (for example v0.1.1).'
         required: true
         type: string
+      diagnose_auth:
+        description: Test the npm OIDC binding without publishing or printing credentials.
+        type: boolean
+        default: false
 
 # Publishing is idempotent: the job first asks the registry whether
 # package.json's version already exists and skips (green) if it does. A
@@ -55,7 +59,35 @@ jobs:
         with:
           node-version: "24"
 
+      - name: Diagnose the saved npm trust binding (no publish)
+        if: inputs.diagnose_auth == true
+        run: |
+          node --input-type=module <<'NODE'
+          const audience = 'npm:registry.npmjs.org';
+          const url = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
+          url.searchParams.set('audience', audience);
+          const identity = await fetch(url, {
+            headers: { authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` },
+            signal: AbortSignal.timeout(30000),
+          });
+          if (!identity.ok) throw new Error(`GitHub OIDC request failed: HTTP ${identity.status}`);
+          const { value: jwt } = await identity.json();
+          const claims = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url'));
+          const fields = ['repository', 'repository_id', 'repository_owner', 'workflow_ref', 'job_workflow_ref', 'ref', 'environment', 'aud'];
+          console.log('Publisher identity:', JSON.stringify(Object.fromEntries(fields.filter(k => claims[k] !== undefined).map(k => [k, claims[k]]))));
+          const packageName = JSON.parse(await (await import('node:fs/promises')).readFile('package.json', 'utf8')).name;
+          const exchange = await fetch(`https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/${encodeURIComponent(packageName)}`, {
+            method: 'POST', headers: { authorization: `Bearer ${jwt}` },
+            signal: AbortSignal.timeout(30000),
+          });
+          console.log(`npm trust exchange for ${packageName}: HTTP ${exchange.status}`);
+          // Never print the response body: success contains an npm access token.
+          if (!exchange.ok) throw new Error('npm rejected this publisher identity; no publication attempted');
+          await exchange.body?.cancel();
+          NODE
+
       - name: Is this version already on the registry?
+        if: inputs.diagnose_auth != true
         id: check
         run: |
           name=$(node -p "require('./package.json').name")
