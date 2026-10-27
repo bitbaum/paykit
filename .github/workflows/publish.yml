@@ -50,10 +50,10 @@ jobs:
       # pnpm version comes from "packageManager" in package.json (SSOT).
       - uses: pnpm/action-setup@v6
 
+      # Leave npm auth configuration empty so the CLI can use OIDC.
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-          registry-url: "https://registry.npmjs.org"
 
       - name: Is this version already on the registry?
         id: check
@@ -107,7 +107,7 @@ jobs:
           NAME: ${{ steps.check.outputs.name }}
           VERSION: ${{ steps.check.outputs.version }}
         run: |
-          if npm publish; then
+          if npm publish --access public --provenance; then
             echo "🚀 Published \`$NAME@$VERSION\`." >> "$GITHUB_STEP_SUMMARY"
           elif npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
             # The check above and this publish are not atomic. If another run
