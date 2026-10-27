@@ -8,15 +8,19 @@ name: Publish
 # rotate — and provenance is attested on the registry. `npm publish`
 # (npm >= 11.5) exchanges the id-token itself. Copied from speechkit (which copied ai-kit).
 #
-# NOT YET BOOTSTRAPPED. npm cannot trust a publisher for a package that does
-# not exist, and the account's second factor is a passkey only a human holds,
-# so the FIRST publish is manual (see README → "npm"). Until then every tag
-# would fail here — a red run that means nothing is wrong. So the job checks
-# the repo variable NPM_PUBLISHING and skips GREEN, saying why, unless it is
-# "on". Set it after the bootstrap:  gh variable set NPM_PUBLISHING -b on
+# npm Trusted Publishing is a one-time setup for this package and workflow.
+# Keep the job gated until that trust is configured and NPM_PUBLISHING is "on".
+# The tag-specific manual dispatch below lets the already-verified immutable
+# release be published after setup without moving or recreating its tag.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Publish the exact verified release tag (for example v0.1.1).'
+        required: true
+        type: string
 
 # Publishing is idempotent: the job first asks the registry whether
 # package.json's version already exists and skips (green) if it does. A
@@ -40,6 +44,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       # pnpm version comes from "packageManager" in package.json (SSOT).
       - uses: pnpm/action-setup@v6
@@ -76,11 +82,21 @@ jobs:
       # rather than silently shipping the wrong number.
       - name: Check tag matches package version
         if: steps.check.outputs.publish == 'true'
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          tag="${GITHUB_REF_NAME#v}"
+          if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Expected a stable release tag like v0.1.1, got $RELEASE_TAG" >&2
+            exit 1
+          fi
+          tag="${RELEASE_TAG#v}"
           pkg=$(node -p "require('./package.json').version")
           if [ "$tag" != "$pkg" ]; then
-            echo "Tag v$tag does not match package.json version $pkg" >&2
+            echo "Tag $RELEASE_TAG does not match package.json version $pkg" >&2
+            exit 1
+          fi
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && [ "$(git describe --tags --exact-match HEAD)" != "$RELEASE_TAG" ]; then
+            echo "The selected checkout is not the exact immutable release tag $RELEASE_TAG" >&2
             exit 1
           fi
 
