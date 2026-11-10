@@ -1,7 +1,7 @@
 {
   "name": "@bitbaum/paykit",
-  "version": "0.1.1",
-  "description": "Let a website get paid without holding the money. Classify a pasted Bitcoin receive string, and record a shown code (Twint, another currency) the visitor pays in their own app.",
+  "version": "0.2.0",
+  "description": "Let a website get paid without holding the money. Sell time-boxed passes through a payment provider (Bitcoin through an OrangeCat account), classify a pasted Bitcoin receive string, and record a shown code (Twint, another currency) the visitor pays in their own app.",
   "license": "MIT",
   "author": "Mao Nakamoto",
   "homepage": "https://bitbaum.orangecat.ch/packages/paykit/",
@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/bitbaum/paykit/issues"
   },
-  "keywords": ["bitcoin", "lightning", "payments", "headless"],
+  "keywords": ["bitcoin", "lightning", "payments", "headless", "checkout", "webhook", "orangecat"],
   "type": "module",
   "sideEffects": false,
   "packageManager": "pnpm@11.25.0",
@@ -27,6 +27,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./checkout": {
+      "types": "./dist/checkout/index.d.ts",
+      "default": "./dist/checkout/index.js"
+    },
+    "./orangecat": {
+      "types": "./dist/orangecat/index.d.ts",
+      "default": "./dist/orangecat/index.js"
     }
   },
   "scripts": {
