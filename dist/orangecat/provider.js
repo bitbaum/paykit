@@ -45,9 +45,11 @@ export function orangeCatProvider(config = {}) {
         id: ORANGECAT_PROVIDER_ID,
         /**
          * The public record of the entity being paid. `payable` is true when it
-         * shows a Bitcoin or Lightning address; OrangeCat can also route to a
-         * wallet the owner connected privately, which this cannot see, so false
-         * means "nothing visible", and an attempted checkout is the final word.
+         * shows a Bitcoin or Lightning address of its own, and null otherwise,
+         * never false: OrangeCat routes a payment to the wallet the owner
+         * connected to the entity or to their account, and that is not part of
+         * the public record. Heidi's project showed neither field while its
+         * owner's wallet was collecting payments. Only `createCheckout` knows.
          */
         async payee(providerRef) {
             const data = await call(`/api/v1/${entityType}s/${encodeURIComponent(providerRef)}`, { method: "GET" });
@@ -56,7 +58,7 @@ export function orangeCatProvider(config = {}) {
             return {
                 name: typeof entity.title === "string" ? entity.title : null,
                 url: `${baseUrl}/${entityType}s/${encodeURIComponent(providerRef)}`,
-                payable: has("bitcoin_address") || has("lightning_address"),
+                payable: has("bitcoin_address") || has("lightning_address") ? true : null,
             };
         },
         async createCheckout({ plan, reference }) {

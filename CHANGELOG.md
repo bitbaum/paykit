@@ -5,6 +5,10 @@ linked below. Git commit dates are source dates, not inferred npm publication
 dates. A GitHub release does not itself establish npm publication.
 Application adoption and deployment evidence are tracked separately.
 
+## 0.2.1
+
+- `payee().payable` is `true` or `null`, never `false`: an entity with no address on its public record can still be paid through its owner's connected wallet.
+
 ## 0.2.0
 
 - `@bitbaum/paykit/checkout`: a provider-neutral `PaymentProvider` (create a checkout for a plan, read its status, authenticate the provider's settlement call), time-boxed entitlement helpers and `applySettlement`, idempotent on the payment's id.
