@@ -83,7 +83,8 @@ export type Payee = {
     url: string;
     /**
      * Whether the provider shows somewhere for money to land. `null` when it
-     * does not say; `createCheckout` is then the only way to find out.
+     * does not say, which is not a no; `createCheckout` is then the only way to
+     * find out.
      */
     payable: boolean | null;
 };

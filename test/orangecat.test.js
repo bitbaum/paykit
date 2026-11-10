@@ -135,7 +135,7 @@ test('verifyWebhook acknowledges other authentic events and refuses everything u
   assert.deepEqual(open.verifyWebhook(settled, { 'x-orangecat-signature': signOrangeCatPayload(settled, secret, now) }), { ok: false, reason: 'no_webhook_secret' });
 });
 
-test('payee reads the receiving entity from OrangeCat and says whether money can land', async () => {
+test('payee reads the receiving entity from OrangeCat, and never says no on the strength of a missing field', async () => {
   const seen = [];
   const answers = [
     { id: 'p', title: 'Heidi', bitcoin_address: null, lightning_address: null },
@@ -148,7 +148,8 @@ test('payee reads the receiving entity from OrangeCat and says whether money can
       return json(200, { success: true, data: answers.shift() });
     },
   });
-  assert.deepEqual(await provider.payee('p'), { name: 'Heidi', url: 'https://orangecat.ch/projects/p', payable: false });
+  // No address on the public record is not a no: the owner's wallet is not part of it.
+  assert.deepEqual(await provider.payee('p'), { name: 'Heidi', url: 'https://orangecat.ch/projects/p', payable: null });
   assert.equal((await provider.payee('p')).payable, true);
   assert.equal(seen[0], 'https://orangecat.ch/api/v1/projects/p');
 });

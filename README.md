@@ -59,7 +59,15 @@ isActive(entitlement);
 
 The seller publishes a product on [OrangeCat](https://orangecat.ch) and connects a wallet there. The provider asks OrangeCat for an invoice that pays that product (`POST /api/v1/payments/public`), so the money goes from the buyer's wallet to the seller's. It needs no API key.
 
-- `entityType` says what is being paid (`product` by default, `project` for an app's own OrangeCat project). `provider.payee(id)` reads that entity from OrangeCat: its name, its page, and whether it shows an address to pay. The payee is never typed into the app.
+- `entityType` says what is being paid (`product` by default, `project` for an app's own OrangeCat project). `provider.payee(id)` reads that entity from OrangeCat: its name and its page (`https://orangecat.ch/projects/<id>`). Its `payable` is `true` when the entity shows an address of its own and `null` otherwise, never `false`: the owner's connected wallet is not on the public record, so only `createCheckout` knows.
+- The id of what is paid is the app's configuration, never a constant in this package or in a component. Each app keeps its own OrangeCat project id in its config and passes it as the plan's `providerRef`:
+
+  ```ts
+  // In the app's config layer, from its environment.
+  const projectId = process.env.ORANGECAT_PAY_ENTITY_ID; // Heidi's, Loki's and Solon's each differ
+  const provider = orangeCatProvider({ entityType: 'project', webhookSecret: process.env.ORANGECAT_WEBHOOK_SECRET });
+  const month: Plan = { id: 'month', days: 30, price: { amount: sats, currency: 'SAT' }, providerRef: projectId };
+  ```
 - The plan is priced in whole `SAT`. The caller states the amount; `applySettlement` checks what arrived.
 - A `payment.settled` webhook names only the payment, never the buyer. Without the stored checkout a settlement cannot be matched.
 - The webhook is authenticated with `X-OrangeCat-Signature` (`t=<unix>,v1=<HMAC-SHA-256 of "${t}.${rawBody}">`, five minutes' tolerance). Pass the body exactly as received.
