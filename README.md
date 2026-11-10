@@ -57,7 +57,10 @@ isActive(entitlement);
 
 ### Bitcoin through an OrangeCat account
 
-The seller publishes a product on [OrangeCat](https://orangecat.ch) and connects a wallet there. The provider asks OrangeCat for an invoice that pays that product (`POST /api/v1/payments/public`), so the money goes from the buyer's wallet to the seller's. It needs no API key.
+The seller publishes a product on [OrangeCat](https://orangecat.ch) and connects a wallet there. The provider asks OrangeCat for an invoice that pays it, so the money goes from the buyer's wallet to the seller's.
+
+- With `apiKey` (an `ock_…` integration key, scopes `payments.write` and `payments.read`) it starts the payment with `POST /api/v1/payments` and reads it with `GET /api/v1/payments/{id}`. OrangeCat records the key's owner as the buyer and refuses an owner paying their own entity, so a key minted by the account that is paid cannot start a customer's payment. When OrangeCat answers exactly that, the provider falls back to the account-less call.
+- Without a key it uses the account-less `POST /api/v1/payments/public` and reads the payment with the status token it returns.
 
 - `entityType` says what is being paid (`product` by default, `project` for an app's own OrangeCat project). `provider.payee(id)` reads that entity from OrangeCat: its name and its page (`https://orangecat.ch/projects/<id>`). Its `payable` is `true` when the entity shows an address of its own and `null` otherwise, never `false`: the owner's connected wallet is not on the public record, so only `createCheckout` knows.
 - The id of what is paid is the app's configuration, never a constant in this package or in a component. Each app keeps its own OrangeCat project id in its config and passes it as the plan's `providerRef`:

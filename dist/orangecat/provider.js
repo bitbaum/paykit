@@ -3,6 +3,9 @@ import { SIGNATURE_HEADER, verifyOrangeCatSignature } from "./signature.js";
 export const ORANGECAT_PROVIDER_ID = "orangecat";
 export const ORANGECAT_SETTLED_EVENT = "payment.settled";
 const SATS_PER_BTC = 100_000_000;
+const KEY_HEADER = "x-orangecat-key";
+/** OrangeCat's sentence for a key whose owner is the payee. */
+const OWN_ENTITY = /your own entity/i;
 export class OrangeCatError extends Error {
     status;
     constructor(message, status) {
@@ -65,17 +68,38 @@ export function orangeCatProvider(config = {}) {
             if (plan.price.currency !== "SAT" || !Number.isInteger(plan.price.amount) || plan.price.amount <= 0) {
                 throw new OrangeCatError("An OrangeCat plan is priced in whole SAT.", 0);
             }
-            const data = await call("/api/v1/payments/public", {
-                method: "POST",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({
-                    entity_type: entityType,
-                    entity_id: plan.providerRef,
-                    amount_btc: Number((plan.price.amount / SATS_PER_BTC).toFixed(8)),
-                }),
+            const body = JSON.stringify({
+                entity_type: entityType,
+                entity_id: plan.providerRef,
+                amount_btc: Number((plan.price.amount / SATS_PER_BTC).toFixed(8)),
             });
+            const accountless = () => call("/api/v1/payments/public", { method: "POST", headers: { "content-type": "application/json" }, body });
+            let data;
+            let keyed = false;
+            if (config.apiKey) {
+                try {
+                    data = await call("/api/v1/payments", {
+                        method: "POST",
+                        headers: { "content-type": "application/json", [KEY_HEADER]: config.apiKey },
+                        body,
+                    });
+                    keyed = true;
+                }
+                catch (error) {
+                    // The key belongs to the account being paid: OrangeCat will not let
+                    // an owner buy from themselves. The customer still has to be able
+                    // to pay, so the invoice is asked for without the key.
+                    if (!(error instanceof OrangeCatError) || !OWN_ENTITY.test(error.message))
+                        throw error;
+                    data = await accountless();
+                }
+            }
+            else {
+                data = await accountless();
+            }
             const intent = data.payment_intent;
-            if (!isRecord(intent) || typeof intent.id !== "string" || typeof data.status_token !== "string" || typeof data.qr_data !== "string") {
+            const token = typeof data.status_token === "string" ? data.status_token : null;
+            if (!isRecord(intent) || typeof intent.id !== "string" || typeof data.qr_data !== "string" || (!keyed && !token)) {
                 throw new OrangeCatError("OrangeCat returned no payable invoice.", 502);
             }
             const invoice = data.qr_data;
@@ -95,15 +119,18 @@ export function orangeCatProvider(config = {}) {
                 // A `bitcoin:` URI opens a wallet as it is; a bare invoice needs the scheme.
                 payUrl: /^bitcoin:/i.test(invoice) ? invoice : `lightning:${invoice}`,
                 expiresAt,
-                handle: data.status_token,
+                // A keyed payment is read with the key; an account-less one with its token.
+                ...(token ? { handle: token } : {}),
             };
         },
         async status(checkout) {
-            if (!checkout.handle)
-                throw new OrangeCatError("An OrangeCat checkout is read with its handle.", 0);
-            const data = await call(`/api/v1/payments/public/${encodeURIComponent(checkout.id)}`, {
+            const path = `/api/v1/payments${checkout.handle ? "/public" : ""}/${encodeURIComponent(checkout.id)}`;
+            if (!checkout.handle && !config.apiKey) {
+                throw new OrangeCatError("An OrangeCat checkout is read with its handle, or with the key that created it.", 0);
+            }
+            const data = await call(path, {
                 method: "GET",
-                headers: { "x-payment-token": checkout.handle },
+                headers: checkout.handle ? { "x-payment-token": checkout.handle } : { [KEY_HEADER]: config.apiKey },
             });
             return { state: toState(data.status), paidAt: typeof data.paid_at === "string" ? data.paid_at : null };
         },

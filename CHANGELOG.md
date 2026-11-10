@@ -5,6 +5,10 @@ linked below. Git commit dates are source dates, not inferred npm publication
 dates. A GitHub release does not itself establish npm publication.
 Application adoption and deployment evidence are tracked separately.
 
+## 0.3.0
+
+- OrangeCat provider: with `apiKey` a payment is started and read through the keyed v1 API. A key owned by the payee is refused by OrangeCat; the provider then falls back to the account-less call so the customer still gets an invoice.
+
 ## 0.2.1
 
 - `payee().payable` is `true` or `null`, never `false`: an entity with no address on its public record can still be paid through its owner's connected wallet.
