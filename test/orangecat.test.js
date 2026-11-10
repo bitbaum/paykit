@@ -153,3 +153,55 @@ test('payee reads the receiving entity from OrangeCat, and never says no on the 
   assert.equal((await provider.payee('p')).payable, true);
   assert.equal(seen[0], 'https://orangecat.ch/api/v1/projects/p');
 });
+
+const intentAnswer = (extra = {}) => ({ success: true, data: { payment_intent: { id: 'pi-9', expires_at: '2026-11-10T12:10:00.000Z' }, qr_data: 'LNBC1KEYED', expires_in_seconds: 600, ...extra } });
+
+test('with a key the payment is started and read through the keyed API', async () => {
+  const calls = [];
+  const provider = orangeCatProvider({
+    apiKey: 'ock_test_abc',
+    entityType: 'project',
+    now: () => now,
+    fetch: async (url, init) => {
+      calls.push({ url, method: init.method, key: init.headers['x-orangecat-key'], token: init.headers['x-payment-token'] });
+      return init.method === 'POST' ? json(201, intentAnswer()) : json(200, { success: true, data: { status: 'paid', paid_at: '2026-11-10T12:02:00.000Z' } });
+    },
+  });
+  const checkout = await provider.createCheckout({ plan: month, reference: 'user-1' });
+  assert.equal(calls[0].url, 'https://orangecat.ch/api/v1/payments');
+  assert.equal(calls[0].key, 'ock_test_abc');
+  assert.equal(checkout.id, 'pi-9');
+  assert.equal(checkout.handle, undefined);
+  const status = await provider.status(checkout);
+  assert.deepEqual(calls[1], { url: 'https://orangecat.ch/api/v1/payments/pi-9', method: 'GET', key: 'ock_test_abc', token: undefined });
+  assert.equal(status.state, 'paid');
+});
+
+test('a key owned by the payee is refused by OrangeCat, and the customer still gets an invoice', async () => {
+  const calls = [];
+  const provider = orangeCatProvider({
+    apiKey: 'ock_owner',
+    entityType: 'project',
+    now: () => now,
+    fetch: async (url, init) => {
+      calls.push({ url, key: init.headers['x-orangecat-key'] });
+      if (url.endsWith('/api/v1/payments')) return json(400, { success: false, error: { code: 'BAD_REQUEST', message: 'You cannot pay for your own entity' } });
+      return json(201, intentAnswer({ status_token: 'tok' }));
+    },
+  });
+  const checkout = await provider.createCheckout({ plan: month, reference: 'user-1' });
+  assert.deepEqual(calls.map((c) => c.url), ['https://orangecat.ch/api/v1/payments', 'https://orangecat.ch/api/v1/payments/public']);
+  // The key is not sent on the account-less call.
+  assert.equal(calls[1].key, undefined);
+  assert.equal(checkout.handle, 'tok');
+});
+
+test('any other keyed refusal reaches the caller, and nothing is retried without the key', async () => {
+  let n = 0;
+  const provider = orangeCatProvider({
+    apiKey: 'ock_bad',
+    fetch: async () => (n++, json(403, { success: false, error: { code: 'FORBIDDEN', message: 'This key is not allowed to initiate payments.' } })),
+  });
+  await assert.rejects(provider.createCheckout({ plan: month, reference: 'u' }), /not allowed to initiate/);
+  assert.equal(n, 1);
+});
