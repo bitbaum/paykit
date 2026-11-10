@@ -5,6 +5,7 @@ import type {
   CheckoutState,
   CheckoutStatus,
   HeaderBag,
+  Payee,
   PaymentProvider,
   WebhookResult,
 } from "../checkout/types.js";
@@ -89,6 +90,23 @@ export function orangeCatProvider(config: OrangeCatConfig = {}): PaymentProvider
 
   return {
     id: ORANGECAT_PROVIDER_ID,
+
+    /**
+     * The public record of the entity being paid. `payable` is true when it
+     * shows a Bitcoin or Lightning address; OrangeCat can also route to a
+     * wallet the owner connected privately, which this cannot see, so false
+     * means "nothing visible", and an attempted checkout is the final word.
+     */
+    async payee(providerRef: string): Promise<Payee> {
+      const data = await call(`/api/v1/${entityType}s/${encodeURIComponent(providerRef)}`, { method: "GET" });
+      const entity = isRecord(data[entityType]) ? (data[entityType] as Record<string, unknown>) : data;
+      const has = (key: string) => typeof entity[key] === "string" && (entity[key] as string).trim() !== "";
+      return {
+        name: typeof entity.title === "string" ? entity.title : null,
+        url: `${baseUrl}/${entityType}s/${encodeURIComponent(providerRef)}`,
+        payable: has("bitcoin_address") || has("lightning_address"),
+      };
+    },
 
     async createCheckout({ plan, reference }: CheckoutInput): Promise<Checkout> {
       if (plan.price.currency !== "SAT" || !Number.isInteger(plan.price.amount) || plan.price.amount <= 0) {

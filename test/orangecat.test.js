@@ -134,3 +134,21 @@ test('verifyWebhook acknowledges other authentic events and refuses everything u
   const open = orangeCatProvider({ now: () => now });
   assert.deepEqual(open.verifyWebhook(settled, { 'x-orangecat-signature': signOrangeCatPayload(settled, secret, now) }), { ok: false, reason: 'no_webhook_secret' });
 });
+
+test('payee reads the receiving entity from OrangeCat and says whether money can land', async () => {
+  const seen = [];
+  const answers = [
+    { id: 'p', title: 'Heidi', bitcoin_address: null, lightning_address: null },
+    { id: 'p', title: 'Heidi', bitcoin_address: null, lightning_address: 'heidi@example.com' },
+  ];
+  const provider = orangeCatProvider({
+    entityType: 'project',
+    fetch: async (url) => {
+      seen.push(url);
+      return json(200, { success: true, data: answers.shift() });
+    },
+  });
+  assert.deepEqual(await provider.payee('p'), { name: 'Heidi', url: 'https://orangecat.ch/projects/p', payable: false });
+  assert.equal((await provider.payee('p')).payable, true);
+  assert.equal(seen[0], 'https://orangecat.ch/api/v1/projects/p');
+});

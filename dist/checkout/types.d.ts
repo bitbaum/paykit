@@ -76,8 +76,21 @@ export type WebhookResult =
     reason: string;
 };
 export type HeaderBag = Headers | Record<string, string | string[] | undefined>;
+/** Who receives the money, as the provider itself describes them. */
+export type Payee = {
+    name: string | null;
+    /** The payee's own page at the provider, where a person can also pay by hand. */
+    url: string;
+    /**
+     * Whether the provider shows somewhere for money to land. `null` when it
+     * does not say; `createCheckout` is then the only way to find out.
+     */
+    payable: boolean | null;
+};
 export interface PaymentProvider {
     readonly id: string;
+    /** Read the payee from the provider. Never from anything typed into the app. */
+    payee?(providerRef: string): Promise<Payee>;
     createCheckout(input: CheckoutInput): Promise<Checkout>;
     status(checkout: Pick<Checkout, "id" | "handle">): Promise<CheckoutStatus>;
     /** `rawBody` exactly as received: a parsed and re-serialised body no longer matches its signature. */

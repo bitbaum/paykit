@@ -6,6 +6,7 @@ export type {
   CheckoutStatus,
   HeaderBag,
   Money,
+  Payee,
   PaymentProvider,
   Plan,
   SettledEvent,

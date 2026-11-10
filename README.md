@@ -59,6 +59,7 @@ isActive(entitlement);
 
 The seller publishes a product on [OrangeCat](https://orangecat.ch) and connects a wallet there. The provider asks OrangeCat for an invoice that pays that product (`POST /api/v1/payments/public`), so the money goes from the buyer's wallet to the seller's. It needs no API key.
 
+- `entityType` says what is being paid (`product` by default, `project` for an app's own OrangeCat project). `provider.payee(id)` reads that entity from OrangeCat: its name, its page, and whether it shows an address to pay. The payee is never typed into the app.
 - The plan is priced in whole `SAT`. The caller states the amount; `applySettlement` checks what arrived.
 - A `payment.settled` webhook names only the payment, never the buyer. Without the stored checkout a settlement cannot be matched.
 - The webhook is authenticated with `X-OrangeCat-Signature` (`t=<unix>,v1=<HMAC-SHA-256 of "${t}.${rawBody}">`, five minutes' tolerance). Pass the body exactly as received.
