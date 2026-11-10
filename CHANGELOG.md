@@ -5,6 +5,11 @@ linked below. Git commit dates are source dates, not inferred npm publication
 dates. A GitHub release does not itself establish npm publication.
 Application adoption and deployment evidence are tracked separately.
 
+## 0.2.0
+
+- `@bitbaum/paykit/checkout`: a provider-neutral `PaymentProvider` (create a checkout for a plan, read its status, authenticate the provider's settlement call), time-boxed entitlement helpers and `applySettlement`, idempotent on the payment's id.
+- `@bitbaum/paykit/orangecat`: the first provider, Bitcoin through an OrangeCat account, with its webhook signature check.
+
 ## 0.1.1
 
 - [Tagged source `v0.1.1`](https://github.com/bitbaum/paykit/tree/d3038e303e6fe9e97a171131c7001637d104fd77)
